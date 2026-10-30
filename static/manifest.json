@@ -1,0 +1,10 @@
+{
+  "name": "Localhost Controller",
+  "short_name": "Gamepad",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#090e1c",
+  "theme_color": "#0b1020"
+}
