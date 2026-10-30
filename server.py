@@ -2,8 +2,6 @@ import asyncio
 import json
 import os
 import secrets
-import string
-from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -11,29 +9,27 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOMS = {}
-ROOM_LOCK = asyncio.Lock()
-KEYS = {"left": "a", "right": "d", "jump": "space"}
+PC_TOKEN = os.getenv("PC_AGENT_TOKEN", "")
+PHONE_TOKEN = os.getenv("PHONE_TOKEN", "")
+CLIENTS = {"phone": None, "pc": None}
+LOCK = asyncio.Lock()
+ALLOWED_KEYS = {"left", "right", "jump"}
 
 
-def make_code():
-    return "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
-
-
-async def send_json(ws, payload):
-    await ws.send_text(json.dumps(payload))
+async def send(ws, data):
+    if ws and ws.client_state.name == "CONNECTED":
+        await ws.send_text(json.dumps(data))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
-    for room in ROOMS.values():
-        for ws in (room.get("phone"), room.get("pc")):
-            if ws:
-                try:
-                    await ws.close()
-                except Exception:
-                    pass
+    for ws in CLIENTS.values():
+        if ws:
+            try:
+                await ws.close()
+            except Exception:
+                pass
 
 
 app = FastAPI(title="LocalhostController", lifespan=lifespan)
@@ -50,40 +46,32 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/api/room")
-async def create_room():
-    async with ROOM_LOCK:
-        code = make_code()
-        while code in ROOMS:
-            code = make_code()
-        ROOMS[code] = {"phone": None, "pc": None, "token": secrets.token_urlsafe(24)}
-        return {"code": code, "token": ROOMS[code]["token"]}
-
-
-@app.websocket("/ws/{code}/{role}")
-async def websocket_endpoint(ws: WebSocket, code: str, role: str, token: str = ""):
+@app.websocket("/ws/{role}")
+async def websocket_endpoint(ws: WebSocket, role: str, token: str = ""):
     if role not in ("phone", "pc"):
         await ws.close(code=1008)
         return
-    room = ROOMS.get(code.upper())
-    if not room or (role == "pc" and not secrets.compare_digest(token, room["token"])):
+    expected = PHONE_TOKEN if role == "phone" else PC_TOKEN
+    if not expected or not secrets.compare_digest(token, expected):
         await ws.close(code=1008)
         return
 
     await ws.accept()
-    # A room has one controller and one local PC agent.
-    old = room.get(role)
-    if old and old is not ws:
+    async with LOCK:
+        previous = CLIENTS[role]
+        CLIENTS[role] = ws
+    if previous and previous is not ws:
         try:
-            await old.close(code=4001)
+            await previous.close(code=4001)
         except Exception:
             pass
-    room[role] = ws
-    await send_json(ws, {"type": "connected", "role": role})
 
-    other_role = "pc" if role == "phone" else "phone"
-    if room.get(other_role):
-        await send_json(room[other_role], {"type": "peer", "online": True})
+    await send(ws, {"type": "connected", "role": role})
+    other = CLIENTS["pc" if role == "phone" else "phone"]
+    if other:
+        await send(other, {"type": "peer", "online": True})
+    if role == "phone":
+        await send(ws, {"type": "peer", "online": bool(CLIENTS["pc"])})
 
     try:
         while True:
@@ -92,33 +80,22 @@ async def websocket_endpoint(ws: WebSocket, code: str, role: str, token: str = "
                 msg = json.loads(raw)
             except json.JSONDecodeError:
                 continue
-
             if role == "phone":
-                if msg.get("type") not in ("key", "release_all"):
-                    continue
-                # Whitelist only the three game controls. Never accept arbitrary key names.
-                if msg.get("type") == "key" and msg.get("key") not in ("left", "right", "jump"):
-                    continue
-                peer = room.get("pc")
-                if peer:
-                    await send_json(peer, msg)
-            else:
-                if msg.get("type") == "status" and room.get("phone"):
-                    await send_json(room["phone"], msg)
+                if msg.get("type") == "release_all":
+                    target = CLIENTS["pc"]
+                    await send(target, {"type": "release_all"})
+                elif msg.get("type") == "key" and msg.get("key") in ALLOWED_KEYS:
+                    await send(CLIENTS["pc"], {
+                        "type": "key",
+                        "key": msg["key"],
+                        "down": bool(msg.get("down")),
+                    })
     except WebSocketDisconnect:
         pass
     finally:
-        if room.get(role) is ws:
-            room[role] = None
-        if role == "phone" and room.get("pc"):
-            try:
-                await send_json(room["pc"], {"type": "release_all"})
-            except Exception:
-                pass
-        if room.get(other_role):
-            try:
-                await send_json(room[other_role], {"type": "peer", "online": False})
-            except Exception:
-                pass
-        if not room.get("phone") and not room.get("pc"):
-            ROOMS.pop(code.upper(), None)
+        async with LOCK:
+            if CLIENTS[role] is ws:
+                CLIENTS[role] = None
+        if role == "phone":
+            await send(CLIENTS["pc"], {"type": "release_all"})
+        await send(CLIENTS["pc" if role == "phone" else "phone"], {"type": "peer", "online": False})
