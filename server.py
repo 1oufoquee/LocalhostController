@@ -22,7 +22,7 @@ async def lifespan(app):
 app=FastAPI(title="LocalhostController",lifespan=lifespan)
 app.mount("/static",StaticFiles(directory=os.path.join(BASE_DIR,"static")),name="static")
 @app.get("/")
-async def index():return FileResponse(os.path.join(BASE_DIR,"static","index.html"))
+async def index():return FileResponse(os.path.join(BASE_DIR,"static","index.html"),headers={"Cache-Control":"no-store, no-cache, must-revalidate, max-age=0"})
 @app.get("/health")
 async def health():return {"status":"ok"}
 @app.websocket("/ws/agent/{device_id}")
