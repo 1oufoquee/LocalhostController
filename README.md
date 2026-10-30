@@ -1,42 +1,44 @@
 # LocalhostController
 
-A phone gamepad for a second player in Fireboy and Watergirl-style games.
+A two-phone gamepad for Fireboy and Watergirl-style games.
 
-- Phone: left analog stick sends A/D; right hold button sends Space.
-- Player 1 continues using the PC arrow keys.
-- No room codes, QR codes, or manual token entry.
-- PC agent automatically opens the PC page and registers the computer.
-- On the phone, press **Find PC**, select the computer, then approve the request on the PC screen.
+- Each phone chooses **Fire** or **Water** before connecting.
+- Fire phone sends Arrow Left / Arrow Right / Arrow Up.
+- Water phone sends A / D / W.
+- Both phones can connect to the same PC at the same time.
+- The PC browser asks for approval separately for each character.
+- A small Windows agent sends the approved keys to the game.
 
-## Deploy on Northflank
+## Northflank
 
-1. Create a service from this repository using the Dockerfile.
-2. Expose HTTP port 8080 and enable WebSocket upgrades.
-3. Health check path: `/health`.
-4. Use one running replica because active WebSocket connections are held in memory.
-5. No environment variables or manually created secrets are needed for this pairing flow.
+Deploy this repository using its Dockerfile, expose HTTP port 8080, enable WebSocket upgrades, and use one replica. Health check: `/health`.
 
-## Start the PC
+## Windows PC
 
-Install Python 3.10+ on Windows. Download this repository, open PowerShell in its folder and run:
+Install Python 3.10+ and run from the project folder:
 
 ```powershell
-py -m pip install -r requirements.txt
-py pc_agent.py --server https://YOUR-NORTHFLANK-DOMAIN
+python -m pip install -r requirements.txt
+python pc_agent.py --server https://YOUR-NORTHFLANK-DOMAIN
 ```
 
-The agent creates a persistent random device ID, opens the PC confirmation page in the browser, and connects to the server. Leave the agent window running while playing.
+The agent opens the PC approval page. Keep the agent and PC page running while playing.
 
-## Connect the phone
+## Phones
 
-Open the main site URL on the phone, press **Найти ПК**, select your computer, and approve the request on the PC browser page. The controller then appears on the phone.
+Open the public service URL on each phone:
+
+1. Phone one selects **Огонь**, presses **Найти компьютер**, selects the PC, then the PC user approves.
+2. Phone two selects **Вода**, does the same, and the PC user approves.
+3. Both phones show their own joystick and jump button.
+
+Install the page to the home screen or use the fullscreen button for a more immersive controller.
 
 ## Controls
 
-- Phone joystick: A / D.
-- Phone jump button: Space.
-- PC player: arrow keys as usual.
+| Phone | Left / right | Jump |
+|---|---|---|
+| Fire | Arrow Left / Arrow Right | Arrow Up |
+| Water | A / D | W |
 
-## Important
-
-The Windows agent is required: browsers cannot synthesize operating-system keyboard input for another game or application. The agent only accepts A, D and Space, and the PC user must approve each phone connection. Keep the agent running while playing.
+The Windows agent is required because a mobile browser cannot send operating-system key presses directly to another app or game.
