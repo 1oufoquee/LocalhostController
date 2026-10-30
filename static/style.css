@@ -12,3 +12,5 @@
 :fullscreen .controls{justify-content:space-around}
 :fullscreen .controller-actions button{min-height:34px}
 @media (display-mode: standalone){body{padding:0}.shell{padding-top:env(safe-area-inset-top)}}
+
+.role-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}.role-card{min-height:130px;border:1px solid #344968;border-radius:16px;background:#121f34;color:#eaf2ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}.role-card .role-icon{font-size:34px}.role-card b{font-size:13px;letter-spacing:2px}.role-card small{font-size:10px;color:#9aabc4}.role-card.selected{outline:2px solid #65c9ef;background:#1b3552;box-shadow:0 0 24px #249bd433}.role-card.fire-card.selected{outline-color:#ff9b52}.role-card.water-card.selected{outline-color:#65c9ef}#findBtn:disabled{opacity:.4}
