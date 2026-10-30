@@ -1,15 +1,8 @@
 <!doctype html>
-<html lang="ru">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><title>Localhost Controller</title><link rel="stylesheet" href="/static/style.css"></head>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><title>Localhost Controller</title><link rel="stylesheet" href="/static/style.css"></head>
 <body><main class="shell">
-<header><div class="brand"><span class="mark">LC</span><div><b>LOCALHOST</b><small>PLAYER CONTROLLER</small></div></div><span id="connection" class="pill offline">ПОДКЛЮЧЕНИЕ…</span></header>
-<section id="controller" class="controller">
-<div class="game-label"><span class="dot"></span><span>ВОДА · ИГРОК 2</span><span class="spacer"></span><span id="pcStatus">ПОИСК ПК</span></div>
-<div class="controls">
-<div class="stick-area"><div class="control-caption">ДВИЖЕНИЕ</div><div id="stick" class="stick"><div class="stick-ring"></div><div id="nub" class="nub"><span></span></div></div><div class="hint">ТЯНИ ВЛЕВО / ВПРАВО</div></div>
-<div class="jump-area"><div class="control-caption">ПРЫЖОК</div><button id="jump" class="jump"><span>↑</span><b>JUMP</b></button><div class="hint">УДЕРЖИВАЙ ДЛЯ ПРЫЖКА</div></div>
-</div>
-<div id="message" class="message hidden"></div>
-</section>
-<footer>ЛОКАЛЬНЫЙ ГЕЙМПАД · PLAYER 2</footer>
-</main><script src="/static/app.js"></script></body></html>
+<header><div class="brand"><span class="mark">LC</span><div><b>LOCALHOST</b><small>PLAYER CONTROLLER</small></div></div><span id="connection" class="pill offline">НЕ ПОДКЛЮЧЕНО</span></header>
+<section id="phoneHome" class="panel join hidden"><div class="eyebrow">PLAYER TWO · WATER</div><h1>Найти компьютер</h1><p>Открой этот сайт на игровом ПК. Он появится здесь автоматически.</p><button id="findBtn" class="primary">Найти ПК</button><div id="deviceList" class="device-list"></div><p id="phoneMessage" class="error"></p></section>
+<section id="controller" class="controller hidden"><div class="game-label"><span class="dot"></span><span>ВОДА · ИГРОК 2</span><span class="spacer"></span><span id="pcStatus">ПК НА СВЯЗИ</span></div><div class="controls"><div class="stick-area"><div class="control-caption">ДВИЖЕНИЕ</div><div id="stick" class="stick"><div class="stick-ring"></div><div id="nub" class="nub"><span></span></div></div><div class="hint">ТЯНИ ВЛЕВО / ВПРАВО</div></div><div class="jump-area"><div class="control-caption">ПРЫЖОК</div><button id="jump" class="jump"><span>↑</span><b>JUMP</b></button><div class="hint">УДЕРЖИВАЙ ДЛЯ ПРЫЖКА</div></div></div><button id="disconnect" class="subtle">Отключиться</button></section>
+<section id="desktopHome" class="panel join hidden"><div class="eyebrow">PLAYER ONE · FIRE</div><h1>Компьютер готов</h1><p>Оставь эту страницу открытой. Когда телефон запросит подключение, здесь появится подтверждение.</p><div id="desktopStatus" class="status-card">Запуск локального агента…</div><div id="approval" class="approval hidden"><h2>Подключить телефон?</h2><p>Разрешить второму игроку управлять персонажем Воды?</p><div class="approval-actions"><button id="denyBtn" class="subtle">Отклонить</button><button id="approveBtn" class="primary">Разрешить</button></div></div></section>
+<footer>ЛОКАЛЬНЫЙ ГЕЙМПАД · PLAYER 2</footer></main><script src="/static/app.js"></script></body></html>
