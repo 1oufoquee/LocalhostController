@@ -1,48 +1,43 @@
 # LocalhostController
 
-Телефонный геймпад для второго игрока в локальных и браузерных играх. Телефон показывает аналоговый джойстик слева и кнопку прыжка справа. Windows-агент превращает команды в удержание A, D и Space.
+A tiny phone gamepad for a second player in Fireboy and Watergirl-style games.
 
-## Важно: архитектура размещения
+- Phone: left virtual analog stick sends A/D; right hold button sends Space.
+- Player 1 continues using the PC keyboard arrow keys.
+- No rooms, pairing codes, QR codes, or room creation.
+- One Windows PC agent keeps an outbound WebSocket connection to the hosted service. The phone connects to the same service.
 
-Веб-сайт и WebSocket-сервер размещаются на Northflank. На игровом ПК запускается `pc_agent.py`. Телефон и ПК могут находиться в разных сетях: оба подключаются к серверу Northflank. Агент на ПК не открывает входящие порты.
+## Northflank deployment
 
-## Развёртывание на Northflank
+1. Create a service from this repository and select Dockerfile.
+2. Expose HTTP port 8080 and enable WebSocket upgrade support.
+3. Set health check path to `/health`.
+4. Configure two long random environment variables:
+   - `PC_AGENT_TOKEN` — secret used only by the Windows agent.
+   - `PHONE_TOKEN` — secret used in the private phone controller link.
+5. Deploy one replica. Connections are held in memory by the single server instance.
 
-1. Создайте Service из этого GitHub-репозитория.
-2. Выберите Dockerfile build pack.
-3. Добавьте публичный HTTP/HTTPS порт контейнера `8080`.
-4. Health check path: `/health`.
-5. Убедитесь, что прокси поддерживает WebSocket upgrade.
-6. Используйте HTTPS-домен сервиса.
+## Windows PC setup
 
-## Подключение
-
-В текущей первой версии endpoint создания комнаты `POST /api/room` возвращает код и токен. Создайте комнату запросом:
-
-```bash
-curl -X POST https://YOUR-DOMAIN/api/room
-```
-
-На игровом ПК (Windows):
+Install Python 3.10+ and download this repository. In PowerShell, from the project folder:
 
 ```powershell
 py -m pip install -r requirements.txt
-py pc_agent.py --server https://YOUR-DOMAIN --code ABC123 --token YOUR_ROOM_TOKEN
+py pc_agent.py --server https://YOUR-NORTHFLANK-DOMAIN --token YOUR_PC_AGENT_TOKEN
 ```
 
-Откройте https://YOUR-DOMAIN на телефоне и введите код комнаты.
+Leave this window running while playing. The agent reconnects automatically after temporary network interruptions.
 
-## Управление
+## Phone setup
 
-- Джойстик: A / D.
-- Кнопка справа: Space.
-- Удержание кнопки отправляет key-down, отпускание — key-up.
-- При отключении телефона агент получает release_all.
+Open this private URL on the phone:
 
-## Безопасность и ограничения
+```
+https://YOUR-NORTHFLANK-DOMAIN/#YOUR_PHONE_TOKEN
+```
 
-- PC WebSocket требует случайный токен комнаты.
-- Телефон может отправлять только команды left/right/jump, произвольные клавиши сервер не принимает.
-- Не публикуйте токен комнаты.
-- Для первой версии хранение комнат находится в памяти одного экземпляра. На Northflank запускайте один репличный экземпляр; при нескольких репликах потребуется Redis/pub-sub.
-- Отключайте контроллер перед вводом паролей или выполнением чувствительных действий на ПК.
+The page opens directly as a full-screen controller. Add it to the home screen for an app-like experience. Do not share the URL: its fragment is the phone access key.
+
+## Safety
+
+The service accepts only left/right/jump actions from the phone. The PC agent maps them to A, D and Space and releases all held keys when the phone disconnects. Keep the phone URL and PC token private. Use HTTPS on the hosted service.
