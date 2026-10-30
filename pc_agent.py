@@ -14,7 +14,7 @@ try:
 except ImportError:
     import pyautogui as keyboard
 
-KEY_MAP = {"left": "a", "right": "d", "jump": "space"}
+KEY_MAP = {"left": "a", "right": "d", "jump": "w"}
 held = set()
 
 
