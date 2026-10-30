@@ -1,9 +1,12 @@
-"""Windows key bridge for the phone gamepad."""
+"""Windows input bridge. It creates a stable device ID and opens the PC confirmation page."""
 import argparse
 import asyncio
 import json
 import os
-import urllib.parse
+import uuid
+import webbrowser
+from pathlib import Path
+
 import websockets
 
 try:
@@ -15,6 +18,18 @@ KEY_MAP = {"left": "a", "right": "d", "jump": "space"}
 held = set()
 
 
+def get_device_id():
+    path = Path.home() / ".localhostcontroller_device"
+    if path.exists():
+        try:
+            return str(uuid.UUID(path.read_text(encoding="utf-8").strip()))
+        except ValueError:
+            pass
+    value = str(uuid.uuid4())
+    path.write_text(value, encoding="utf-8")
+    return value
+
+
 def release_all():
     for name in list(held):
         try:
@@ -24,15 +39,20 @@ def release_all():
     held.clear()
 
 
-async def run(server, token):
-    parsed = urllib.parse.urlparse(server)
+async def run(server, device_id):
+    from urllib.parse import urlparse
+    parsed = urlparse(server)
     scheme = "wss" if parsed.scheme == "https" else "ws"
-    url = f"{scheme}://{parsed.netloc}/ws/pc?token={urllib.parse.quote(token)}"
+    ws_url = f"{scheme}://{parsed.netloc}/ws/agent/{device_id}"
+    pc_page = f"{server}/?pc={device_id}"
+    webbrowser.open(pc_page)
+    print("PC confirmation page opened in your browser.")
+    print("Keep this window running. The phone will find this PC automatically.")
     while True:
         try:
-            print(f"Connecting to controller at {server} ...")
-            async with websockets.connect(url, ping_interval=20, ping_timeout=20) as ws:
-                print("CONNECTED. Keep this window open while playing.")
+            print("Connecting to LocalhostController...")
+            async with websockets.connect(ws_url, ping_interval=20, ping_timeout=20) as ws:
+                print("PC ONLINE. Waiting for phone controls.")
                 async for raw in ws:
                     msg = json.loads(raw)
                     if msg.get("type") == "key":
@@ -50,7 +70,7 @@ async def run(server, token):
                         release_all()
         except (OSError, websockets.WebSocketException) as exc:
             release_all()
-            print(f"Connection lost: {exc}. Retry in 3 seconds.")
+            print(f"Connection lost: {exc}. Retrying in 3 seconds.")
             await asyncio.sleep(3)
         except asyncio.CancelledError:
             release_all()
@@ -60,14 +80,12 @@ async def run(server, token):
 def main():
     parser = argparse.ArgumentParser(description="LocalhostController Windows agent")
     parser.add_argument("--server", required=True, help="Northflank HTTPS URL")
-    parser.add_argument("--token", default=os.getenv("PC_AGENT_TOKEN"), help="PC_AGENT_TOKEN from Northflank")
     args = parser.parse_args()
-    if not args.token:
-        parser.error("Pass --token or set PC_AGENT_TOKEN environment variable")
+    device_id = get_device_id()
     try:
-        asyncio.run(run(args.server.rstrip("/"), args.token))
+        asyncio.run(run(args.server.rstrip("/"), device_id))
     except KeyboardInterrupt:
-        print("\nStopping controller.")
+        print("\\nStopping controller.")
     finally:
         release_all()
 
